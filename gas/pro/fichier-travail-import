@@ -1,0 +1,67 @@
+// Id fichier listing facture 2016
+var ID_FEUILLE_LISTING_FACTURE = '15b7mrxzgZlBQtgfegTFLOGX58gHsI7G6KTtL-H5dDhU';
+
+function onOpen() {
+  // Création du menu perso
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var entries = [
+    {
+      name : "01 - Réinitialiser le fichier",
+      functionName : "reinitialiser"
+    },
+    {
+      name : "02 - Fusionner et exporter",
+      functionName : "fusionnerDonneesEtExporter"
+    }
+  ];
+  spreadsheet.addMenu("Menu Perso", entries);
+}
+
+
+function reinitialiser() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetAvecFSE = spreadsheet.getSheetByName('Avec FSE');
+  var sheetSansFSE = spreadsheet.getSheetByName('Sans FSE');
+  
+  sheetAvecFSE.clear();
+  sheetSansFSE.clear();
+}
+
+function fusionnerDonneesEtExporter() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetAvecFSE = spreadsheet.getSheetByName('Avec FSE');
+  var sheetSansFSE = spreadsheet.getSheetByName('Sans FSE');
+  var sheetRecap = spreadsheet.getSheetByName('Récap');
+    
+  // Dans Avec FSE, Supprimer les colonnes à partir de “Date de l’acte”,
+  sheetAvecFSE.deleteColumns(5, 7);
+  
+  // Dans Sans FSE, Ajouter une colonne à gauche de “Patient”, et supprimer les colonnes après Patient.
+  sheetSansFSE.insertColumnBefore(3);
+  sheetSansFSE.deleteColumns(5, 5);
+  
+  // Fusionner les données (Dans "Avec FSE")
+  var rowInsertion = sheetAvecFSE.getLastRow() + 1;
+  var lastRowInSansFSE = sheetSansFSE.getLastRow();
+  var rangeACopier = sheetSansFSE.getRange(3, 1, lastRowInSansFSE - 2, 4);
+  
+  sheetAvecFSE.getRange(rowInsertion, 1, lastRowInSansFSE - 2, 4).setValues(rangeACopier.getValues());
+  
+  // Juste pour vérifier !
+  rangeACopier.setBackground('red');
+  
+  // Export des données vers le fichier Listing factures
+  var allValues = sheetRecap.getSheetValues(4, 1, sheetRecap.getLastRow() - 3, 6);
+  var dernierIndex = 0;
+  for (var i = 0; i<allValues.length; i++) {
+    var val = allValues[i][0];
+    if (val) dernierIndex = i;
+  }
+  
+  var rangeAExporter = sheetRecap.getRange(4, 1, dernierIndex + 1, 6);
+  var valuesAExporter = rangeAExporter.getValues();
+  
+  var ssListingFacture = SpreadsheetApp.openById(ID_FEUILLE_LISTING_FACTURE);
+  var sheetListing = ssListingFacture.getSheetByName('Listing');
+  sheetListing.getRange(sheetListing.getLastRow() + 1, 1, valuesAExporter.length, 6).setValues(valuesAExporter);
+}
