@@ -51,7 +51,7 @@ function enrichirFichier() {
   
   // En colonne I, calculer le numéro de facture : =0+STXT(D2;3;6)
   sheet.getRange(1, 9).setValue('Num Facture');
-  sheet.getRange(2, 9, lastRow - 1).setFormulaR1C1("=0+RIGHT(R[0]C[-5];NBCAR(R[0]C[-5])-2)");
+  sheet.getRange(2, 9, lastRow - 1).setFormulaR1C1("=0+LEN(R[0]C[-5];NBCAR(R[0]C[-5])-2)");
   
   // Créer un nouvel onglet “Factures”. Y Coller le contenu du fichier Sheet “Listing Factures”
   var ssListingFacture = SpreadsheetApp.openById(ID_FEUILLE_LISTING_FACTURE);
