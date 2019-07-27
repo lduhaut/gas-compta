@@ -80,9 +80,13 @@ function exportMaisonRetraite() {
   var allData = sheetV1.getRange(2, 1, lastRow - 1, 15).getDisplayValues();
   
   var dataToExport = allData.filter(function(a) { 
+    
     // Libellé = Part patient - Virement
-    // montants positifs
-    return a[6] == 'Part patient - Virement' && a[11] > 0;
+    if (a[6] == 'Part patient - Virement') { 
+      // montants positifs (On utilise parseInt pour convertir 7.5 en un int (7). Sinon, '7.5' !> 0
+      return (parseInt(a[11])) > 0;
+    }
+    return false
   });
   
   Logger.log("Maison retraite : " + dataToExport.length + " lignes")
