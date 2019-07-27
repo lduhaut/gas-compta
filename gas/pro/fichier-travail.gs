@@ -44,6 +44,10 @@ function reinitialiser() {
   // Suppr onglet Données v1 si existant
   var sheetDonneesV1 = spreadsheet.getSheetByName('Données v1');
   if (sheetDonneesV1) spreadsheet.deleteSheet(sheetDonneesV1);
+  
+  // Suppr onglet Export MR si existant
+  var sheetExportMR = spreadsheet.getSheetByName('ExportMR');
+  if (sheetExportMR) spreadsheet.deleteSheet(sheetExportMR);
 }
 
 function test() {
