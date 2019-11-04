@@ -199,13 +199,14 @@ function supprFacturesAnnulees() {
   
   var data = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
   
+  /* Peut apparaître sur les factures impayées, ou sur Virement AMO */
   var facturesImpayees = data.map(function(a, idx) {
     var obj = {};
     obj.idx = idx;
     obj.data = a;
     return obj;
   }).filter(function(a) { 
-    return a.data[2] == 998807;
+    return a.data[2] == 998807 || a.data[2] == 998810;
   });
   
   var indexsASuppr = [];
