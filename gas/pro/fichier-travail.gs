@@ -226,12 +226,19 @@ function supprFacturesAnnulees() {
       Logger.log("La facture " + i + " apparait plusieurs fois");
       
       var factAmount = obj.reduce(function(a, b) {
+        //Logger.log("a (" + a.idx + "): " + a.data[6] + " : " + a.data[11]);
+        //Logger.log("b (" + b.idx + "): " + b.data[6] + " : " + b.data[11]);
         // Pb les nb à virgules avec un point sont considérés comme des dates ...
-        return +a.data[11] + +b.data[11];
-      });
+        var mnt = +a.data[11] + +b.data[11];
+        var accu = {};
+        accu.idx = -1;
+        accu.data = []
+        accu.data[11] = +a.data[11] + +b.data[11];
+        return accu;
+      }).data[11];
       Logger.log('Montant : ' + factAmount);
       
-      if (!factAmount) {
+      if (factAmount < 0.01) {
         Logger.log("La facture " + i + " DOIT ETRE SUPPRIMEE");
         indexsASuppr = indexsASuppr.concat(
           obj.map(function(a) {
