@@ -1,4 +1,4 @@
-var ANNEE = 2019;
+var ANNEE = 2020;
 const LIB_COMMISSION_CB = "Comission Paiements CB - Crédit Mutuel"
 
 function onOpen() {
