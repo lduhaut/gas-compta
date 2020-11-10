@@ -1,3 +1,6 @@
+var ANNEE = 2019;
+const LIB_COMMISSION_CB = "Comission Paiements CB - Crédit Mutuel"
+
 function onOpen() {
   // Création du menu perso
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -9,6 +12,10 @@ function onOpen() {
     {
       name : "Export pour BNC Express",
       functionName : "exportBNCExpress"
+    },
+    {
+      name : "Import CCM",
+      functionName : "importReleveBanque"
     }
   ];
   spreadsheet.addMenu("Menu Perso", entries);
@@ -16,6 +23,108 @@ function onOpen() {
 
 function reinit() {
   LDUComptes.supprimerTousLesMois(); 
+}
+
+function importReleveBanque() {
+  const firstDataLineNum = 3
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const importSheet = ss.getSheetByName("ImportBanque");
+  
+  let dataRange = importSheet.getRange(firstDataLineNum, 1, importSheet.getLastRow() + 1 - firstDataLineNum, 4)
+  let dataFormulas = dataRange.getFormulas()
+  let data = dataRange.getValues().map(function(line, index) {
+    let res = {}
+    res.date = getNumDayOfDate_(line[0])
+    res.libelle = line[1]
+    res.debit = readAmount_(line[2])
+    if (line[3] == "#ERROR!") {
+      // Quand on colle "+ 25,00 EUR" ça devient une formule ...
+      res.credit = readAmount_(dataFormulas[index][3])
+    } else {
+      res.credit = readAmount_(line[3])
+    }
+    
+    addData_(res)
+    
+    return res
+  })
+  
+  // Regroupement des lignes ComCB par date
+  for (let i in data) {
+    let ope = data[i]
+    if (ope.libelle == LIB_COMMISSION_CB) {
+      let otherCommCBSameDay = data.filter((op, j) => op.libelle == LIB_COMMISSION_CB && j < i && op.debit > 0 && op.date == ope.date)
+      if (otherCommCBSameDay.length > 0) {
+        let cumul = parseFloat(otherCommCBSameDay[0].debit) + parseFloat(ope.debit)
+        /* Logger.log('\n\nCOM CB A TRAITER : ')
+        Logger.log(JSON.stringify(otherCommCBSameDay[0]))
+        Logger.log(JSON.stringify(ope))
+        Logger.log('+ ' + otherCommCBSameDay[0].debit + ' + ' + ope.debit + ' = ' + cumul) */
+        otherCommCBSameDay[0].debit = cumul
+        ope.debit = 0
+      }
+    }
+  }
+  data = data.filter(op => op.libelle != LIB_COMMISSION_CB || op.debit > 0)
+  
+  /*for (let i in data) {
+    Logger.log('data['+i+'] = ' + JSON.stringify(data[i]))
+  }*/
+  
+  data.sort((a, b) => a.date - b.date)
+  data.sort((a, b) => ('' + a.categorie).localeCompare(b.categorie))
+  
+  let dataFinales = data.map(obj => {
+                             let d = []
+                             d[0] = obj.categorie || 'Manuel'
+                             d[1] = obj.date
+                             d[2] = obj.libelle
+                             d[3] = obj.compte
+                             d[4] = obj.credit
+                             d[5] = obj.debit
+                             return d
+                             })
+  
+  for (let i in dataFinales) {
+    Logger.log('data['+i+'] = ' + JSON.stringify(dataFinales[i]))
+  }
+  
+  importSheet.getRange(firstDataLineNum, 6, dataFinales.length, dataFinales[0].length).setValues(dataFinales)
+}
+
+function getNumDayOfDate_(dte) {
+  Logger.log('getNumDayOfDate_ ' + dte)
+  return dte.getDate()
+}
+
+function readAmount_(libelle) {
+  const res = libelle.replace(',', '.').replace(/[^\d.]/g,'')
+  // Logger.log('readAmount : ' + libelle + ' -> ' + res)
+  return res;
+}
+
+function addData_(operation) {
+  const CATEGORY_AUTRES = "03_Autres"
+  const CATEGORY_PAIEMENTS_CB = "01_Paiements CB"
+  const CATEGORY_NOEMIE = "04_Tiers payant, ALD & Maison retraite & co"
+  
+  if (operation.libelle.indexOf("COMCB") == 0) {
+    operation.categorie = CATEGORY_AUTRES
+    operation.compte = 627000
+    operation.libelle = LIB_COMMISSION_CB
+  } else if (operation.libelle.indexOf("REMCB") == 0) {
+    operation.categorie = CATEGORY_PAIEMENTS_CB
+    operation.libelle = "Paiements CB"
+  } else if (operation.libelle.indexOf("VIR ") > 0 && operation.libelle.indexOf("Détail \n      Cliquer pour déplier" == 0)) {
+    operation.categorie = CATEGORY_NOEMIE
+    
+    let ligneLibelle = operation.libelle.split('\n').find(a => a.indexOf("VIR ") >= 0)
+    
+    operation.libelle = ligneLibelle.substring(ligneLibelle.indexOf("VIR ") + 4)
+  } else if (operation.libelle.indexOf("Détail \n      Cliquer pour déplier") == 0) {
+    operation.libelle = operation.libelle.substring(operation.libelle.indexOf("opération ") + 10)
+  }
 }
 
 /**
@@ -66,7 +175,7 @@ function exportBNCExpress() {
     }
     
     if (isExportOn) {
-      if (libelle == 'Tiers payant, ALD & co') {
+      if (libelle.indexOf('Tiers payant, ALD') == 0) {
         isExportOn = false;
         // On stoppe le traitement
         Logger.log('Tiers payant, ALD & co');
@@ -81,7 +190,7 @@ function exportBNCExpress() {
           var date = row[0];
           if (date) {
             // Midi, pour ne pas se prendre la tête avec le décalage horaire
-            lastDate = Utilities.formatDate(new Date(2017, numMonth, date, 12), "GMT", "dd/MM/yyyy");
+            lastDate = Utilities.formatDate(new Date(ANNEE, numMonth, date, 12), "GMT", "dd/MM/yyyy");
           }
           date = lastDate; 
           
